@@ -1,20 +1,20 @@
 ---
 name: Epic
-description: Define a high-level deliverable with goals and outcomes
+description: Describe a product outcome you want to achieve
 title: "[EPIC] "
 labels: [epic]
 ---
 
-## Objective
-Describe the business or product outcome.
+## What do you want to achieve?
+Describe the product outcome in plain language. No technical detail needed.
 
-## Scope
-- In scope:
-- Out of scope:
+## Why is this valuable?
+Explain the user or business benefit.
 
 ## Success Criteria
+What does "done" look like from a user perspective?
 - [ ]
 - [ ]
 
-## Dependencies
-List related issues or external blockers.
+## Notes
+Any constraints, deadlines, or context the team should know about.

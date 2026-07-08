@@ -1,19 +1,26 @@
 ---
 name: PM Breakdown
-description: Break an epic into implementation-ready tasks
+description: PM breakdown of an epic into scope, criteria, and architect handoff
 title: "[PM] "
 labels: [planning]
 ---
 
 ## Parent Epic
-Link epic issue.
+Link epic issue: #
 
-## Task Breakdown
-- [ ] Architect task
-- [ ] Design task
-- [ ] Backend task
-- [ ] Frontend task
-- [ ] QA task
+## Scope
+### In Scope
+-
+
+### Out of Scope
+-
+
+## Measurable Success Criteria
+- [ ]
+- [ ]
+
+## Risks and Constraints
+-
 
 ## Notes
-Add sequencing, risk, and ownership guidance.
+Sequencing, dependencies, or ownership guidance for the Architect.
