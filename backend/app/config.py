@@ -20,7 +20,7 @@ class Settings:
     app_name: str = getenv("APP_NAME", "Note App Backend")
     app_env: str = getenv("APP_ENV", "development")
     database_url: str = getenv(
-        "DATABASE_URL", "******localhost:5432/note_app"
+        "DATABASE_URL", "postgresql_dsn_placeholder"
     )
 
 
