@@ -1,0 +1,33 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# --- uv ---
+uv.lock
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+coverage/
+
+# --- Environment files ---
+.env
+.env.*
+!.env.example
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/

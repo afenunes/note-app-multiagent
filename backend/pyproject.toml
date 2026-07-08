@@ -1,0 +1,44 @@
+[project]
+name = "note-app-backend"
+version = "0.1.0"
+description = "FastAPI backend for the multi-agent note app"
+readme = "../README.md"
+requires-python = ">=3.11"
+dependencies = [
+  # Web framework and ASGI server
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  # Database and ORM
+  "sqlalchemy>=2.0.30",
+  "psycopg2-binary>=2.9.9",
+  # Validation and settings
+  "pydantic>=2.8.0",
+  "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+  "httpx2>=0.0.8",
+  "black>=24.4.0",
+  "ruff>=0.5.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.24.2"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
