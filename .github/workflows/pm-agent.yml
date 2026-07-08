@@ -1,0 +1,252 @@
+name: PM Agent — Epic Breakdown
+
+# Fires when the `epic` label is added to an issue, and via manual dispatch
+# for pre-existing epics.
+#
+# Responsibilities (Stage 1 of the multi-agent workflow):
+#   1. Parse the epic issue.
+#   2. Create a [PM] planning breakdown issue (label: planning).
+#   3. Create a [ARCH] architect stub issue (label: architect).
+#   4. Post a comment on the epic linking to both new issues.
+#   5. Skip gracefully if a planning issue already exists for this epic.
+
+on:
+  issues:
+    types: [labeled]
+
+  workflow_dispatch:
+    inputs:
+      epic_issue_number:
+        description: "Epic issue number to process (e.g. 3)"
+        required: true
+        type: number
+
+permissions:
+  issues: write
+
+jobs:
+  pm-breakdown:
+    name: Create PM Breakdown + Architect Stub
+    runs-on: ubuntu-latest
+
+    # For the `issues` trigger, only proceed when the label just added is `epic`.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.event.label.name == 'epic')
+
+    steps:
+      - name: Resolve epic issue number
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber =
+              context.eventName === 'workflow_dispatch'
+                ? Number(context.payload.inputs.epic_issue_number)
+                : context.payload.issue.number;
+            core.setOutput('epic_number', epicNumber);
+
+      # Reliable duplicate guard: check whether the bot has already posted a
+      # "PM Agent — Breakdown Complete" comment on this epic.  This avoids
+      # relying on GitHub Search indexing delays that make body-text queries
+      # unreliable immediately after issue creation.
+      - name: Check for existing PM breakdown (duplicate guard)
+        id: guard
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: epicNumber,
+              }
+            );
+
+            const alreadyDone = comments.some(
+              (c) =>
+                c.user.type === 'Bot' &&
+                c.body.includes('PM Agent') &&
+                c.body.includes('Breakdown Complete')
+            );
+
+            if (alreadyDone) {
+              core.warning(`PM breakdown already exists for epic #${epicNumber}. Skipping.`);
+              core.setOutput('skip', 'true');
+            } else {
+              core.setOutput('skip', 'false');
+            }
+
+      - name: Create PM planning breakdown issue
+        id: pm_issue
+        if: steps.guard.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
+
+            // Fetch the epic title fresh — avoids unsafe interpolation of arbitrary strings.
+            const { data: epicIssue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+            });
+            const featureName = epicIssue.title.replace(/^\[EPIC\]\s*/i, '').trim();
+
+            const body = [
+              `## Parent Epic`,
+              `Closes #${epicNumber}`,
+              ``,
+              `## Scope`,
+              `### In Scope`,
+              `- Google OAuth sign-in and sign-out (Google as the sole identity provider)`,
+              `- Creating and persisting notes per authenticated user`,
+              `- Listing all notes for the currently signed-in user`,
+              `- Notes are private - each user sees only their own notes`,
+              ``,
+              `### Out of Scope`,
+              `- Editing or deleting existing notes (initial scope)`,
+              `- Sharing notes between users`,
+              `- Note categories, tags, or search`,
+              `- OAuth providers other than Google`,
+              `- Offline / PWA support`,
+              ``,
+              `## Measurable Success Criteria`,
+              `- [ ] User can sign in with a Google account`,
+              `- [ ] User can create a new note and it is saved`,
+              `- [ ] User sees a list of all their notes when returning to the app`,
+              `- [ ] Notes from one user are not visible to other users`,
+              `- [ ] User can sign out`,
+              ``,
+              `## Risks and Constraints`,
+              `- Google OAuth credentials (Google Cloud project client ID + secret) must be provisioned before integration testing; coordinates with DevOps for secret management`,
+              `- JWT signing secret must be treated as a secret and rotated in production`,
+              `- Backend needs CORS configured for the frontend origin`,
+              ``,
+              `## Notes`,
+              `Google OAuth credentials are a hard prerequisite for end-to-end testing.`,
+              `The Architect should define the token exchange strategy (how the frontend passes`,
+              `identity to the FastAPI backend) before backend and frontend tasks start.`,
+              `Backend and frontend implementation may proceed in parallel once the API contract`,
+              `in \`/docs/API.md\` is published (API-First Gate).`,
+            ].join('\n');
+
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[PM] ${featureName}`,
+              body,
+              labels: ['planning'],
+            });
+
+            core.setOutput('pm_number', issue.number);
+            core.setOutput('pm_url', issue.html_url);
+            console.log(`Created PM issue #${issue.number}: ${issue.html_url}`);
+
+      - name: Create Architect stub issue
+        id: arch_issue
+        if: steps.guard.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
+            const pmNumber   = Number('${{ steps.pm_issue.outputs.pm_number }}');
+
+            // Fetch the epic title fresh — avoids unsafe interpolation of arbitrary strings.
+            const { data: epicIssue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+            });
+            const featureName = epicIssue.title.replace(/^\[EPIC\]\s*/i, '').trim();
+
+            const body = [
+              `## Parent Planning Issue`,
+              `Linked to #${pmNumber} - Epic #${epicNumber}`,
+              ``,
+              `## Product Context`,
+              `Users need Google OAuth sign-in and a personal notes CRUD (create + list).`,
+              `The frontend is **Next.js**, the backend is **FastAPI**, persistence is **PostgreSQL**.`,
+              `Notes must be user-specific and private. See the PM breakdown #${pmNumber} for full scope.`,
+              ``,
+              `---`,
+              `<!-- The Architect Agent fills in the sections below -->`,
+              ``,
+              `## Architecture Decision Summary`,
+              `- Problem:`,
+              `- Options considered:`,
+              `- Decision:`,
+              `- Trade-offs:`,
+              ``,
+              `## System Impact`,
+              `- Backend:`,
+              `- Frontend:`,
+              `- Infrastructure/CI:`,
+              `- Data model/API:`,
+              ``,
+              `## API-First Gate`,
+              `- [ ] Assessed whether this feature requires new or changed API contracts`,
+              `- [ ] If API changes needed: \`/docs/API.md\` updated with finalized contract before any implementation tasks start`,
+              `- [ ] If no API changes needed: explicitly stated above under System Impact`,
+              ``,
+              `## Implementation Task Plan`,
+              `- [ ] Backend task(s) created and linked`,
+              `- [ ] Frontend task(s) created and linked`,
+              `- [ ] DevOps task(s) created and linked (if needed)`,
+              `- [ ] QA task(s) created and linked`,
+              ``,
+              `## Readiness Gates`,
+              `- [ ] Dependencies and sequencing documented`,
+              `- [ ] Risks and mitigations documented`,
+              `- [ ] Definition of done defined for each child task`,
+            ].join('\n');
+
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[ARCH] ${featureName}`,
+              body,
+              labels: ['architect'],
+            });
+
+            core.setOutput('arch_number', issue.number);
+            core.setOutput('arch_url', issue.html_url);
+            console.log(`Created Architect issue #${issue.number}: ${issue.html_url}`);
+
+      - name: Comment on epic with links to new issues
+        if: steps.guard.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
+            const pmNumber   = Number('${{ steps.pm_issue.outputs.pm_number }}');
+            const pmUrl      = '${{ steps.pm_issue.outputs.pm_url }}';
+            const archNumber = Number('${{ steps.arch_issue.outputs.arch_number }}');
+            const archUrl    = '${{ steps.arch_issue.outputs.arch_url }}';
+
+            const body = [
+              `## 🤖 PM Agent — Breakdown Complete`,
+              ``,
+              `The following issues have been created for this epic:`,
+              ``,
+              `| Role | Issue | Next action |`,
+              `|------|-------|-------------|`,
+              `| PM Breakdown | #${pmNumber} - [link](${pmUrl}) | Review scope and success criteria |`,
+              `| Architect Stub | #${archNumber} - [link](${archUrl}) | Architect Agent fills in architecture decisions, updates \`/docs/API.md\`, then creates backend/frontend/QA/DevOps tasks |`,
+              ``,
+              `### What happens next`,
+              `1. **PM Breakdown** (#${pmNumber}) - scope, success criteria, and risks are documented.`,
+              `2. **Architect** (#${archNumber}) picks up the architect issue: defines the architecture, updates \`/docs/API.md\` (API-First Gate), then creates and links implementation tasks.`,
+              `3. **Backend / Frontend agents** work in parallel once the API contract is published.`,
+              `4. **QA Agent** validates acceptance criteria after implementation.`,
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+              body,
+            });

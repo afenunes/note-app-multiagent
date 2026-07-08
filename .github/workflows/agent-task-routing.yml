@@ -1,0 +1,69 @@
+name: Agent Task Routing
+
+on:
+  issues:
+    types: [opened, labeled, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  route-by-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign role owner based on issue label
+        uses: actions/github-script@v7
+        env:
+          PM_ASSIGNEE: ${{ vars.PM_ASSIGNEE }}
+          ARCHITECT_ASSIGNEE: ${{ vars.ARCHITECT_ASSIGNEE }}
+          BACKEND_ASSIGNEE: ${{ vars.BACKEND_ASSIGNEE }}
+          FRONTEND_ASSIGNEE: ${{ vars.FRONTEND_ASSIGNEE }}
+          QA_ASSIGNEE: ${{ vars.QA_ASSIGNEE }}
+          DEVOPS_ASSIGNEE: ${{ vars.DEVOPS_ASSIGNEE }}
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = new Set((issue.labels || []).map((l) => l.name.toLowerCase()));
+            const normalize = (value) => (value || '').trim();
+
+            const routes = [
+              { label: 'planning', role: 'PM', assignee: normalize(process.env.PM_ASSIGNEE) },
+              { label: 'architect', role: 'Architect', assignee: normalize(process.env.ARCHITECT_ASSIGNEE) },
+              { label: 'backend', role: 'Backend', assignee: normalize(process.env.BACKEND_ASSIGNEE) },
+              { label: 'frontend', role: 'Frontend', assignee: normalize(process.env.FRONTEND_ASSIGNEE) },
+              { label: 'qa', role: 'QA', assignee: normalize(process.env.QA_ASSIGNEE) },
+              { label: 'devops', role: 'DevOps', assignee: normalize(process.env.DEVOPS_ASSIGNEE) },
+            ];
+
+            const existingAssignees = new Set((issue.assignees || []).map((a) => a.login.toLowerCase()));
+            const added = [];
+
+            for (const route of routes) {
+              if (!labels.has(route.label) || !route.assignee) {
+                continue;
+              }
+
+              const assigneeLogin = route.assignee.toLowerCase();
+              if (existingAssignees.has(assigneeLogin)) {
+                continue;
+              }
+
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  assignees: [route.assignee],
+                });
+                existingAssignees.add(assigneeLogin);
+                added.push(`${route.role}: @${route.assignee}`);
+              } catch (error) {
+                core.warning(`Could not assign @${route.assignee} for ${route.role}: ${error.message}`);
+              }
+            }
+
+            if (added.length) {
+              core.info(`Issue #${issue.number} auto-routed -> ${added.join(', ')}`);
+            } else {
+              core.info(`No assignee changes for issue #${issue.number}.`);
+            }

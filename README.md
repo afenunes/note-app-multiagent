@@ -21,6 +21,8 @@ This repository is organized so specialized agents can work in parallel:
 
 See `/docs/WORKFLOW.md` and `/.github/agent-instructions/*` for role-specific guidance.
 
+Issue ownership routing is automated by `/.github/workflows/agent-task-routing.yml` using repository variables (`PM_ASSIGNEE`, `ARCHITECT_ASSIGNEE`, `BACKEND_ASSIGNEE`, `FRONTEND_ASSIGNEE`, optional `QA_ASSIGNEE`, `DEVOPS_ASSIGNEE`).
+
 ## Repository Layout
 ```text
 backend/    # FastAPI service
