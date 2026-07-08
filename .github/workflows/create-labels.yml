@@ -1,0 +1,49 @@
+name: Create Workflow Labels
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create workflow labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              { name: 'epic',      color: '0052cc', description: 'High-level product deliverable' },
+              { name: 'planning',  color: 'e11d48', description: 'PM breakdown and scope definition' },
+              { name: 'architect', color: '7c3aed', description: 'Architecture analysis and task generation' },
+              { name: 'design',    color: 'f59e0b', description: 'UX/UI deliverables and handoff' },
+              { name: 'backend',   color: '059669', description: 'API and data-layer implementation' },
+              { name: 'frontend',  color: '0ea5e9', description: 'UI and API integration implementation' },
+              { name: 'qa',        color: 'dc2626', description: 'Validation, test plans, and defect tracking' },
+              { name: 'devops',    color: '6b7280', description: 'CI/CD and deployment automation' },
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ...label,
+                });
+                console.log(`Created label: ${label.name}`);
+              } catch (err) {
+                if (err.status === 422) {
+                  // Label already exists — update it
+                  await github.rest.issues.updateLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ...label,
+                  });
+                  console.log(`Updated existing label: ${label.name}`);
+                } else {
+                  throw err;
+                }
+              }
+            }

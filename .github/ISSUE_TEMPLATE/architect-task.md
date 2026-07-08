@@ -26,6 +26,11 @@ Link PM breakdown or epic issue.
 - [ ] DevOps task(s) created and linked (if needed)
 - [ ] QA task(s) created and linked
 
+## API-First Gate
+- [ ] Assessed whether this feature requires new or changed API contracts
+- [ ] If API changes needed: `/docs/API.md` updated with finalized contract before any implementation tasks start
+- [ ] If no API changes needed: explicitly stated above under System Impact
+
 ## Readiness Gates
 - [ ] Dependencies and sequencing documented
 - [ ] Risks and mitigations documented
