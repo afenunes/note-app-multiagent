@@ -21,6 +21,7 @@ jobs:
             const instructions = {
               planning: '.github/agent-instructions/pm-agent.md',
               epic: '.github/agent-instructions/pm-agent.md',
+              architect: '.github/agent-instructions/architect-agent.md',
               design: '.github/agent-instructions/designer-agent.md',
               backend: '.github/agent-instructions/backend-agent.md',
               frontend: '.github/agent-instructions/frontend-agent.md',
@@ -41,7 +42,7 @@ jobs:
                 ].join('\n')
               : [
                   '🤖 No role label detected yet.',
-                  'Add one of: `planning`, `design`, `backend`, `frontend`, `qa`, `devops`',
+                  'Add one of: `planning`, `architect`, `design`, `backend`, `frontend`, `qa`, `devops`',
                   'to receive the matching agent instruction references.'
                 ].join('\n');
 

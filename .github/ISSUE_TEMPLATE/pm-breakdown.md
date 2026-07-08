@@ -9,6 +9,7 @@ labels: [planning]
 Link epic issue.
 
 ## Task Breakdown
+- [ ] Architect task
 - [ ] Design task
 - [ ] Backend task
 - [ ] Frontend task
