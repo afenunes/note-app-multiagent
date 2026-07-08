@@ -47,3 +47,21 @@ npm run dev
 ## Environment Setup
 - Copy `backend/.env.example` to `backend/.env`
 - Copy `frontend/.env.example` to `frontend/.env.local`
+
+## Vercel Preview Deployments (Pull Requests)
+This repository includes a GitHub Actions workflow that deploys the `frontend/` app to Vercel on every PR update and posts the preview URL in the PR comments.
+
+### Required GitHub Repository Secrets
+Add the following in **Settings → Secrets and variables → Actions**:
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+### One-Time Vercel Setup
+1. Create/import this project in Vercel.
+2. Set the project root to `frontend` (or keep your current root if already configured accordingly).
+3. Copy your Vercel org and project IDs into the repository secrets above.
+
+### Notes
+- Preview deployment runs for PRs from branches in this repository.
+- PRs from forks will not get preview deployments because secrets are not exposed to forked workflows.
