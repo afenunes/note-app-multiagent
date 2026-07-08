@@ -1,0 +1,53 @@
+name: Agent Assignment Guidance
+
+on:
+  issues:
+    types: [opened, assigned, labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  comment-agent-guidance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post guidance comment based on labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = (issue.labels || []).map(l => l.name.toLowerCase());
+
+            const instructions = {
+              planning: '.github/agent-instructions/pm-agent.md',
+              epic: '.github/agent-instructions/pm-agent.md',
+              design: '.github/agent-instructions/designer-agent.md',
+              backend: '.github/agent-instructions/backend-agent.md',
+              frontend: '.github/agent-instructions/frontend-agent.md',
+              qa: '.github/agent-instructions/qa-agent.md',
+              devops: '.github/agent-instructions/devops-agent.md'
+            };
+
+            const matches = Object.entries(instructions)
+              .filter(([label]) => labels.includes(label))
+              .map(([, path]) => `- ${path}`);
+
+            const body = matches.length
+              ? [
+                  '🤖 Agent instruction files relevant to this issue:',
+                  ...matches,
+                  '',
+                  'Please follow the role-specific guidance before implementation.'
+                ].join('\n')
+              : [
+                  '🤖 No role label detected yet.',
+                  'Add one of: `planning`, `design`, `backend`, `frontend`, `qa`, `devops`',
+                  'to receive the matching agent instruction references.'
+                ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body
+            });
