@@ -46,35 +46,35 @@ jobs:
                 : context.payload.issue.number;
             core.setOutput('epic_number', epicNumber);
 
-      - name: Fetch epic details
-        id: epic
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
-            const { data: issue } = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: epicNumber,
-            });
-            core.setOutput('title', issue.title);
-            core.setOutput('body', issue.body || '');
-            core.setOutput('number', issue.number);
-
-      - name: Check for existing planning issue
+      # Reliable duplicate guard: check whether the bot has already posted a
+      # "PM Agent — Breakdown Complete" comment on this epic.  This avoids
+      # relying on GitHub Search indexing delays that make body-text queries
+      # unreliable immediately after issue creation.
+      - name: Check for existing PM breakdown (duplicate guard)
         id: guard
         uses: actions/github-script@v7
         with:
           script: |
-            const epicNumber = '${{ steps.epic.outputs.number }}';
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
 
-            // Search for any open planning issue that mentions this epic number.
-            const { data } = await github.rest.search.issuesAndPullRequests({
-              q: `repo:${context.repo.owner}/${context.repo.repo} is:issue label:planning "#${epicNumber}" in:body`,
-            });
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: epicNumber,
+              }
+            );
 
-            if (data.total_count > 0) {
-              core.warning(`Planning issue already exists for epic #${epicNumber}. Skipping.`);
+            const alreadyDone = comments.some(
+              (c) =>
+                c.user.type === 'Bot' &&
+                c.body.includes('PM Agent') &&
+                c.body.includes('Breakdown Complete')
+            );
+
+            if (alreadyDone) {
+              core.warning(`PM breakdown already exists for epic #${epicNumber}. Skipping.`);
               core.setOutput('skip', 'true');
             } else {
               core.setOutput('skip', 'false');
@@ -86,10 +86,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const epicNumber = '${{ steps.epic.outputs.number }}';
-            const epicTitle  = `${{ steps.epic.outputs.title }}`;
-            // Strip the [EPIC] prefix for the child issue titles, if present.
-            const featureName = epicTitle.replace(/^\[EPIC\]\s*/i, '').trim();
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
+
+            // Fetch the epic title fresh — avoids unsafe interpolation of arbitrary strings.
+            const { data: epicIssue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+            });
+            const featureName = epicIssue.title.replace(/^\[EPIC\]\s*/i, '').trim();
 
             const body = [
               `## Parent Epic`,
@@ -100,7 +105,7 @@ jobs:
               `- Google OAuth sign-in and sign-out (Google as the sole identity provider)`,
               `- Creating and persisting notes per authenticated user`,
               `- Listing all notes for the currently signed-in user`,
-              `- Notes are private — each user sees only their own notes`,
+              `- Notes are private - each user sees only their own notes`,
               ``,
               `### Out of Scope`,
               `- Editing or deleting existing notes (initial scope)`,
@@ -147,14 +152,20 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const epicNumber = '${{ steps.epic.outputs.number }}';
-            const pmNumber   = '${{ steps.pm_issue.outputs.pm_number }}';
-            const epicTitle  = `${{ steps.epic.outputs.title }}`;
-            const featureName = epicTitle.replace(/^\[EPIC\]\s*/i, '').trim();
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
+            const pmNumber   = Number('${{ steps.pm_issue.outputs.pm_number }}');
+
+            // Fetch the epic title fresh — avoids unsafe interpolation of arbitrary strings.
+            const { data: epicIssue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: epicNumber,
+            });
+            const featureName = epicIssue.title.replace(/^\[EPIC\]\s*/i, '').trim();
 
             const body = [
               `## Parent Planning Issue`,
-              `Linked to #${pmNumber}  ·  Epic #${epicNumber}`,
+              `Linked to #${pmNumber} - Epic #${epicNumber}`,
               ``,
               `## Product Context`,
               `Users need Google OAuth sign-in and a personal notes CRUD (create + list).`,
@@ -210,10 +221,10 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const epicNumber = Number('${{ steps.epic.outputs.number }}');
-            const pmNumber   = '${{ steps.pm_issue.outputs.pm_number }}';
+            const epicNumber = Number('${{ steps.resolve.outputs.epic_number }}');
+            const pmNumber   = Number('${{ steps.pm_issue.outputs.pm_number }}');
             const pmUrl      = '${{ steps.pm_issue.outputs.pm_url }}';
-            const archNumber = '${{ steps.arch_issue.outputs.arch_number }}';
+            const archNumber = Number('${{ steps.arch_issue.outputs.arch_number }}');
             const archUrl    = '${{ steps.arch_issue.outputs.arch_url }}';
 
             const body = [
@@ -223,14 +234,14 @@ jobs:
               ``,
               `| Role | Issue | Next action |`,
               `|------|-------|-------------|`,
-              `| PM Breakdown | #${pmNumber} — [link](${pmUrl}) | Review scope and success criteria |`,
-              `| Architect Stub | #${archNumber} — [link](${archUrl}) | Architect Agent fills in architecture decisions, updates \`/docs/API.md\`, then creates backend/frontend/QA/DevOps tasks |`,
+              `| PM Breakdown | #${pmNumber} - [link](${pmUrl}) | Review scope and success criteria |`,
+              `| Architect Stub | #${archNumber} - [link](${archUrl}) | Architect Agent fills in architecture decisions, updates \`/docs/API.md\`, then creates backend/frontend/QA/DevOps tasks |`,
               ``,
               `### What happens next`,
-              `1. ✅ **PM Breakdown** (#${pmNumber}) — scope, success criteria, and risks are documented.`,
-              `2. 🏗 **Architect** (#${archNumber}) picks up the architect issue: defines the architecture, updates \`/docs/API.md\` (API-First Gate), then creates and links implementation tasks.`,
-              `3. ⚙️ **Backend / Frontend agents** work in parallel once the API contract is published.`,
-              `4. 🧪 **QA Agent** validates acceptance criteria after implementation.`,
+              `1. **PM Breakdown** (#${pmNumber}) - scope, success criteria, and risks are documented.`,
+              `2. **Architect** (#${archNumber}) picks up the architect issue: defines the architecture, updates \`/docs/API.md\` (API-First Gate), then creates and links implementation tasks.`,
+              `3. **Backend / Frontend agents** work in parallel once the API contract is published.`,
+              `4. **QA Agent** validates acceptance criteria after implementation.`,
             ].join('\n');
 
             await github.rest.issues.createComment({
@@ -239,3 +250,4 @@ jobs:
               issue_number: epicNumber,
               body,
             });
+
