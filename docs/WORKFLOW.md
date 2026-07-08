@@ -87,17 +87,7 @@ Triggered by: implementation tasks marked ready for review.
 ## Automation (Issue Routing)
 - Workflow: `/.github/workflows/agent-task-routing.yml`
 - Behavior:
-  - `planning` issues are auto-assigned to the PM owner.
-  - `architect` issues are auto-assigned to the Architect owner.
-  - `backend` and `frontend` issues are auto-assigned to their respective dev owners.
-  - `qa` and `devops` issues are auto-assigned when owners are configured.
-- Repository variables used for assignee mapping:
-  - `PM_ASSIGNEE`
-  - `ARCHITECT_ASSIGNEE`
-  - `BACKEND_ASSIGNEE`
-  - `FRONTEND_ASSIGNEE`
-  - `QA_ASSIGNEE` (optional)
-  - `DEVOPS_ASSIGNEE` (optional)
+  - `planning`, `architect`, `backend`, `frontend`, `qa`, and `devops` issues are auto-assigned to `copilot`.
 
 ## Collaboration Rules
 - Every implementation task must link to both planning and architect parent issues.

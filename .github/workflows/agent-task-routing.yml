@@ -13,26 +13,18 @@ jobs:
     steps:
       - name: Assign role owner based on issue label
         uses: actions/github-script@v7
-        env:
-          PM_ASSIGNEE: ${{ vars.PM_ASSIGNEE }}
-          ARCHITECT_ASSIGNEE: ${{ vars.ARCHITECT_ASSIGNEE }}
-          BACKEND_ASSIGNEE: ${{ vars.BACKEND_ASSIGNEE }}
-          FRONTEND_ASSIGNEE: ${{ vars.FRONTEND_ASSIGNEE }}
-          QA_ASSIGNEE: ${{ vars.QA_ASSIGNEE }}
-          DEVOPS_ASSIGNEE: ${{ vars.DEVOPS_ASSIGNEE }}
         with:
           script: |
             const issue = context.payload.issue;
             const labels = new Set((issue.labels || []).map((l) => l.name.toLowerCase()));
-            const normalize = (value) => (value || '').trim();
 
             const routes = [
-              { label: 'planning', role: 'PM', assignee: normalize(process.env.PM_ASSIGNEE) },
-              { label: 'architect', role: 'Architect', assignee: normalize(process.env.ARCHITECT_ASSIGNEE) },
-              { label: 'backend', role: 'Backend', assignee: normalize(process.env.BACKEND_ASSIGNEE) },
-              { label: 'frontend', role: 'Frontend', assignee: normalize(process.env.FRONTEND_ASSIGNEE) },
-              { label: 'qa', role: 'QA', assignee: normalize(process.env.QA_ASSIGNEE) },
-              { label: 'devops', role: 'DevOps', assignee: normalize(process.env.DEVOPS_ASSIGNEE) },
+              { label: 'planning', role: 'PM', assignee: 'copilot' },
+              { label: 'architect', role: 'Architect', assignee: 'copilot' },
+              { label: 'backend', role: 'Backend', assignee: 'copilot' },
+              { label: 'frontend', role: 'Frontend', assignee: 'copilot' },
+              { label: 'qa', role: 'QA', assignee: 'copilot' },
+              { label: 'devops', role: 'DevOps', assignee: 'copilot' },
             ];
 
             const existingAssignees = new Set((issue.assignees || []).map((a) => a.login.toLowerCase()));
