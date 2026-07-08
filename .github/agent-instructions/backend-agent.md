@@ -9,6 +9,7 @@ Build secure, observable, and testable APIs for the note app.
 - Add automated tests for API behavior.
 
 ## Handoff Rules
-- Document request/response contracts in `/docs/API.md`.
+- **Do not start implementation until the API contract for the feature is finalized in `/docs/API.md` by the Architect.** This is a hard prerequisite.
+- Implement endpoints strictly according to the contract in `/docs/API.md`. If a discrepancy is found, flag it to the Architect before proceeding.
 - Validate inputs and return consistent error payloads.
 - Provide migration and rollback notes with DB changes.

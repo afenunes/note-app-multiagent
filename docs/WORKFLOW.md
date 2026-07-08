@@ -17,7 +17,11 @@ This workflow is intentionally strict to reduce ambiguity, rework, and missed de
 ### Stage 1 — Architecture (Architect Agent)
 1. Architect defines boundaries, data flow, API contract impact, and rollout strategy.
 2. Architect documents trade-offs and decisions.
-3. Architect creates and links implementation tasks (`backend`, `frontend`, `devops`, `qa`) with dependency order.
+3. **API-First Gate:** Architect assesses whether the feature requires new or changed API contracts.
+   - If yes: Architect updates `/docs/API.md` with the finalized contract **before** creating implementation tasks.
+   - If no: Architect notes explicitly that no API changes are needed.
+4. Architect creates and links implementation tasks (`backend`, `frontend`, `devops`, `qa`) with dependency order.
+   - Backend and frontend tasks may be worked **in parallel** once the API contract in `/docs/API.md` is published.
 
 ### Stage 2 — Design (Designer Agent)
 1. Designer provides UX deliverables for affected user flows.
@@ -39,6 +43,7 @@ This workflow is intentionally strict to reduce ambiguity, rework, and missed de
 
 ## Hard Gates (Must Pass)
 - No implementation starts without linked `planning` + `architect` issues.
+- No backend or frontend implementation starts until the API contract in `/docs/API.md` is updated (if changes are required).
 - No frontend/backend merge without clear acceptance criteria.
 - No issue closure without evidence of validation.
 - No architecture change during implementation without updating parent architect issue.
@@ -56,5 +61,6 @@ This workflow is intentionally strict to reduce ambiguity, rework, and missed de
 ## Collaboration Rules
 - Every implementation task must link to both planning and architect parent issues.
 - Acceptance criteria and definition of done must be explicit before implementation starts.
-- API and architecture docs must be updated for behavior or contract changes.
+- API and architecture docs must be updated for behavior or contract changes **before** implementation tasks are started.
+- Backend and frontend agents may work in parallel once the API contract in `/docs/API.md` is finalized by the Architect.
 - Task sequencing is owned by the Architect Agent, priority is owned by the PM Agent.
